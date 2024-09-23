@@ -1,12 +1,18 @@
 import tkinter as tk
 from tkinterdnd2 import TkinterDnD, DND_FILES  # pip install tkinterdnd2
+from tkinter import messagebox
 import os
-import convert
+import functions
 import re
+
+#pyinstaller --onefile --add-data "C:\Users\timme\AppData\Local\Programs\Python\Python312\Lib\site-packages\tkinterdnd2\tkdnd\win-x64;tkinterDnD2" "main_ui.py"
+# pyinstaller.exe --collect-all TkinterDnD2 --windowed main_ui.py
+# pyinstaller -F -w main_ui.py --additional-hooks-dir=.
+
 
 # Function to process a wav file (placeholder function)
 def process_wav(file_path, sample_rate, text_field_prestr):
-    convert.convert(file_path, sample_rate, text_field_prestr)
+    functions.convert(file_path, sample_rate, text_field_prestr)
 
 # Handle drag-and-drop event
 def on_drop(event, sample_rate, text_field_prestr):
@@ -16,8 +22,6 @@ def on_drop(event, sample_rate, text_field_prestr):
     #sample_rate = text_field.get()
     for _ in dropped_path_list:
         if os.path.isdir(_):
-            
-           
             # If it's a directory, process all wav files in it
             for root, dirs, files in os.walk(_):
                 for file in files:
@@ -29,7 +33,7 @@ def on_drop(event, sample_rate, text_field_prestr):
         elif _.endswith(".wav"):
             # If it's a single WAV file, process it
             process_wav(_, sample_rate, text_field_prestr)
-            print(os.path.basename(_))
+            
         else:
             print("Please drop a WAV file or a folder containing WAV files.")
 
@@ -37,7 +41,12 @@ def debug_and_drop(event, text_field_rate, text_field_prestr):
     #check if Khz is number and Between 1-192000 and if prestring contains illegal symbols
     if text_field_rate.get().isnumeric() and (1 <= int(text_field_rate.get()) <= 192000):
         text_field_prestr = re.sub('[^\\w_.)( -]', '', text_field_prestr.get())
-        on_drop(event, int(text_field_rate.get()), text_field_prestr)
+
+        try:
+            on_drop(event, int(text_field_rate.get()), text_field_prestr)
+        except ValueError as e:
+             # Handle the ValueError without crashing the program
+            messagebox.showerror("Input Error", str(e))
     else:
         print("Please insert Number between 1 - 192000")
 
@@ -69,7 +78,7 @@ class DragDropApp(TkinterDnD.Tk):
         self.checkbox_overwrite.pack(pady=5)
        
         # Create a label for instruction
-        label = tk.Label(self, text="Drag and Drop WAV file or folder here", width=50, height=10)
+        label = tk.Label(self, text="Drag and Drop 8/16 Bit WAV file or folder here.", width=50, height=20, borderwidth=2, relief="groove")
         label.pack(pady=50)
 
         # Enable drag-and-drop
