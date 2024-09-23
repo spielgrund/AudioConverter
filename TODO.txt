@@ -1,0 +1,16 @@
+midi note
+beschriftungen: 
+    khz
+    pretxt
+radio button überschreiben
+khz range 1-96000
+Funktionen ordenlich benennen
+funktionen zusammenführen
+release
+
+extra für mich:
+Truncate Front und Back
+
+Warnungen
+
+Test 32bit / 8 bit
