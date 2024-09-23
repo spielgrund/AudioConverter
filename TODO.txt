@@ -1,9 +1,10 @@
-midi note
+midi note x
 beschriftungen: 
-    khz
-    pretxt
-radio button überschreiben
-khz range 1-96000
+    khz x
+    pretxt x
+radio button überschreiben x
+khz range 1-192000 x
+Prestring check x
 Funktionen ordenlich benennen
 funktionen zusammenführen
 release
@@ -13,4 +14,8 @@ Truncate Front und Back
 
 Warnungen
 
-Test 32bit / 8 bit
+Test 32 bit / 24 bit / 8 bit
+mono x
+24 not supported
+32 not supported
+maybe PyWave

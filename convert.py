@@ -1,6 +1,7 @@
 import convert_with_loop
 import read_loop_points
 import write_loop_points
+import read_midi_unity_note
 import os
 
 def convert(input_file, target_rate, text_field_prestr):
@@ -9,6 +10,8 @@ def convert(input_file, target_rate, text_field_prestr):
     loop_points = read_loop_points.read_loop_points(input_file)
     loop_start = 0
     loop_end = 0
+    midi_unity_note = read_midi_unity_note.read_midi_unity_note_from_smpl_chunk(input_file)
+    print(midi_unity_note)
     output_file = os.path.dirname(input_file) + os.sep + text_field_prestr + os.path.basename(input_file)
     if loop_points:
         #If Loop Points are found
@@ -32,7 +35,7 @@ def convert(input_file, target_rate, text_field_prestr):
 
         print(f"Conversion to {target_rate}hz completed successfully!")
 
-        write_loop_points.add_loop_points_to_wav(output_file, output_file, new_loop_start, new_loop_end)
+        write_loop_points.add_loop_points_to_wav(output_file, output_file, new_loop_start, new_loop_end, midi_unity_note)
 
     else:
         print("No loop points found in the WAV file.")

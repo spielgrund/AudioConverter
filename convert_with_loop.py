@@ -16,8 +16,11 @@ def read_wav_with_loops(file_path):
         dtype = np.uint8  # 8-bit audio
     elif sample_width == 2:
         dtype = np.int16  # 16-bit audio
+    elif sample_width == 3:
+        raise ValueError(f"Unsupported sample width: {sample_width}") #24 support for later
     elif sample_width == 4:
-        dtype = np.int32  # 32-bit audio
+        raise ValueError(f"Unsupported sample width: {sample_width}") #32 support for later
+        #dtype = np.int32  # 32-bit audio
     else:
         raise ValueError(f"Unsupported sample width: {sample_width}")
 
@@ -32,6 +35,7 @@ def write_wav_with_loops(file_path, audio_data, sample_rate, n_channels, sample_
         wav_file.setsampwidth(sample_width)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(audio_data.tobytes())
+        
 
     
 
