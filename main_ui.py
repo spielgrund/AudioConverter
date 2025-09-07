@@ -56,7 +56,7 @@ class DragDropApp(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("Drag and Drop WAV Processor")
+        self.title("Convert Khz with Loop Points")
         self.geometry("400x300")
 
         # Create a text field with a default value of 24000

@@ -5,7 +5,9 @@ import struct
 
 
 def convert(input_file, target_rate, text_field_prestr):
-
+    
+    tags = read_wav_info_chunks(input_file)
+    #print(tags)
     # Look for Loop Points
     loop_points = read_loop_points(input_file)
     loop_start = 0
@@ -15,13 +17,11 @@ def convert(input_file, target_rate, text_field_prestr):
 
     try:
         # Code that may cause a ValueError
-        audio_data, original_rate, n_channels, sample_width = read_wav_data(input_file)
-    except ValueError:
-        print("24 Bit and 32 Bit are not allowed!")
-        raise
         
-    
-
+        audio_data, original_rate, n_channels, sample_width = read_wav_data(input_file)
+    except ValueError as e:
+        print(e)
+        raise 
 
     if loop_points:
         #If Loop Points are found
@@ -44,7 +44,11 @@ def convert(input_file, target_rate, text_field_prestr):
 
         #print(f"Conversion to {target_rate}hz completed successfully!")
 
+        
+
         add_loop_points_to_wav(output_file, output_file, new_loop_start, new_loop_end, midi_unity_note)
+
+        write_wav_info_chunks(output_file, output_file, tags)
 
     else:
         #print("No loop points found in the WAV file.")
@@ -53,6 +57,8 @@ def convert(input_file, target_rate, text_field_prestr):
         resampled_data = resample_audio(audio_data, original_rate, target_rate)
         
         write_wav(output_file, resampled_data, target_rate, n_channels, sample_width)
+
+        write_wav_info_chunks(output_file, output_file, tags)
 
 
 def read_loop_points(wav_file_path):
@@ -105,17 +111,19 @@ def read_loop_points(wav_file_path):
 
 def read_wav_data(file_path):
     #Reads a WAV file, extracts the audio, sample rate
+    
     try:
         with wave.open(file_path, 'rb') as wav_file:
             sample_rate = wav_file.getframerate()
             n_channels = wav_file.getnchannels()
             n_frames = wav_file.getnframes()
             audio_data = wav_file.readframes(n_frames)
-    except Exception as e:
-        raise ValueError(f"24/32 Bit not supported") #24 support for later
+    except wave.Error as e:
+        raise ValueError(f"Error reading WAV file: {e}")
         
     # Convert the byte data to numpy array based on sample width
     sample_width = wav_file.getsampwidth()
+    
     if sample_width == 1:
         dtype = np.uint8  # 8-bit audio
     elif sample_width == 2:
@@ -123,8 +131,8 @@ def read_wav_data(file_path):
     elif sample_width == 3:
         raise ValueError(f"24/32 Bit not supported") #24 support for later
     elif sample_width == 4:
-        raise ValueError(f"24/32 Bit not supported") #24 support for later
-        #dtype = np.int32  # 32-bit audio
+        #raise ValueError(f"24/32 Bit not supported") #24 support for later
+        dtype = np.int32  # 32-bit audio
     else:
         raise ValueError(f"Unsupported sample width: {sample_width}")
 
@@ -230,5 +238,78 @@ def read_midi_unity_note_from_smpl_chunk(wav_file):
                 f.seek(chunk_size, 1)
 
     return 60  # 'smpl' chunk not found
+
+
+
+def read_wav_info_chunks(filepath: str) -> dict:
+    """
+    Reads RIFF INFO metadata (author, title, comments, etc.) from a WAV file.
+    Returns a dictionary of found tags.
+    """
+    tags = {}
+
+    with open(filepath, "rb") as f:
+        # Check RIFF header
+        riff = f.read(12)
+        if riff[0:4] != b"RIFF" or riff[8:12] != b"WAVE":
+            raise ValueError("Not a valid WAV file")
+
+        # Walk through chunks
+        while True:
+            header = f.read(8)
+            if len(header) < 8:
+                break  # EOF
+
+            chunk_id, chunk_size = struct.unpack("<4sI", header)
+            chunk_data = f.read(chunk_size)
+            chunk_id = chunk_id.decode("ascii", errors="ignore")
+
+            # INFO list
+            if chunk_id == "LIST" and chunk_data[0:4] == b"INFO":
+                pos = 4
+                while pos + 8 <= chunk_size:
+                    sub_id = chunk_data[pos:pos+4].decode("ascii", errors="ignore")
+                    sub_size = struct.unpack("<I", chunk_data[pos+4:pos+8])[0]
+                    value = chunk_data[pos+8:pos+8+sub_size].decode("utf-8", errors="ignore").strip("\x00")
+                    tags[sub_id] = value
+                    pos += 8 + sub_size
+                    if sub_size % 2 == 1:  # Padding
+                        pos += 1
+    return tags
+
+
+def write_wav_info_chunks(input_filepath: str, output_filepath: str, new_tags: dict):
+    """
+    Copies a WAV file and adds/updates INFO metadata tags.
+    """
+    with open(input_filepath, "rb") as f:
+        data = f.read()
+
+    # Build INFO chunk
+    info_data = b"INFO"
+    for key, value in new_tags.items():
+        encoded = value.encode("utf-8") + b"\x00"
+        subchunk_size = len(encoded)
+        # pad to even size
+        if subchunk_size % 2 == 1:
+            encoded += b"\x00"
+        info_data += key.encode("ascii") + struct.pack("<I", subchunk_size) + encoded
+
+    list_chunk = b"LIST" + struct.pack("<I", len(info_data)) + info_data
+
+    # Insert LIST chunk before end of file
+    # WAV files are RIFF containers: "RIFF <size> WAVE <chunks...>"
+    # We just append LIST before EOF
+    new_data = data + list_chunk
+
+    # Fix RIFF size (at offset 4, file size - 8)
+    riff_size = len(new_data) - 8
+    new_data = new_data[:4] + struct.pack("<I", riff_size) + new_data[8:]
+
+    with open(output_filepath, "wb") as f:
+        f.write(new_data)
+
+
+
 
 
